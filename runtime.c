@@ -94,6 +94,38 @@ void __attribute__((noreturn)) _exit(__unused int status) {
 #define STDIO_HANDLE_STDIN  0
 #define STDIO_HANDLE_STDOUT 1
 #define STDIO_HANDLE_STDERR 2
+#define STDIO_HANDLE_FILE   3   /* first fd served by the host filesystem */
+
+/* Optional host filesystem (tqv_fs.c, served by tqv.py's console).  Weak
+   so apps that never link it keep the old "no files here" behavior; when
+   it is linked its strong definitions take over and fopen/fgets/fprintf
+   start working on descriptors 3 and up. */
+int __attribute__((weak)) __tinyqv_fs_open(__unused const char *path,
+                                           __unused int flags) {
+    return -1;
+}
+
+int __attribute__((weak)) __tinyqv_fs_close(__unused int fd) {
+    return -1;
+}
+
+int __attribute__((weak)) __tinyqv_fs_read(__unused int fd,
+                                           __unused char *buffer,
+                                           __unused int length) {
+    return -1;
+}
+
+int __attribute__((weak)) __tinyqv_fs_write(__unused int fd,
+                                            __unused const char *buffer,
+                                            __unused int length) {
+    return -1;
+}
+
+long __attribute__((weak)) __tinyqv_fs_lseek(__unused int fd,
+                                             __unused long offset,
+                                             __unused int whence) {
+    return -1;
+}
 
 int _read(int handle, char *buffer, int length) {
     if (handle == STDIO_HANDLE_STDIN) {
@@ -103,6 +135,9 @@ int _read(int handle, char *buffer, int length) {
             *buffer++ = uart_getc();
         }
         return length;
+    }
+    else if (handle >= STDIO_HANDLE_FILE) {
+        return __tinyqv_fs_read(handle, buffer, length);
     }
     return -1;
 }
@@ -124,18 +159,25 @@ int _write(int handle, char *buffer, int length) {
         debug_uart_put_buffer(buffer, length);
         return length;
     }
+    else if (handle >= STDIO_HANDLE_FILE) {
+        return __tinyqv_fs_write(handle, buffer, length);
+    }
     return -1;
 }
 
-int _open(__unused const char *fn, __unused int oflag, ...) {
+int _open(const char *fn, int oflag, ...) {
+    return __tinyqv_fs_open(fn, oflag);
+}
+
+int _close(int fd) {
+    if (fd >= STDIO_HANDLE_FILE)
+        return __tinyqv_fs_close(fd);
     return -1;
 }
 
-int _close(__unused int fd) {
-    return -1;
-}
-
-off_t _lseek(__unused int fd, __unused off_t pos, __unused int whence) {
+off_t _lseek(int fd, off_t pos, int whence) {
+    if (fd >= STDIO_HANDLE_FILE)
+        return (off_t)__tinyqv_fs_lseek(fd, (long)pos, whence);
     return -1;
 }
 

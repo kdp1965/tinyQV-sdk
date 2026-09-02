@@ -15,19 +15,24 @@ TINYQV_SDK ?= ../../tinyQV-sdk
 all: $(PROJECT_NAME).bin $(PROJECT_NAME).hex
 
 clean:
-	cd $(dir $(PROJECT_NAME)) && rm *.o *.elf *.bin *.hex
+	@cd $(dir $(PROJECT_NAME)) && rm *.o *.elf *.bin *.hex
 
 %.o: %.c
-	$(CC) -O2 -I$(TINYQV_SDK) -march=rv32ec_zicsr_zcb_zicond_zilsd -mabi=ilp32e -mno-strict-align -nostdlib -nostartfiles -ffreestanding -ffunction-sections -fdata-sections -Wall -Werror -lc -c $< -o $@
+	@echo "Compiling $(notdir $<)..."
+	@$(CC) -O2 -I$(TINYQV_SDK) -march=rv32ec_zicsr_zcb_zicond_zilsd -mabi=ilp32e -mno-strict-align -nostdlib -nostartfiles -ffreestanding -ffunction-sections -fdata-sections -Wall -Werror -lc -c $< -o $@
 
 %.o: %.s
-	$(AS) -march=rv32ec_zicsr_zcb_zicond_zilsd -mabi=ilp32e $< -o $@
+	@echo "Assembling $(notdir $<)..."
+	@$(AS) -march=rv32ec_zicsr_zcb_zicond_zilsd -mabi=ilp32e $< -o $@
 
 $(PROJECT_NAME).elf: $(PROJECT_SOURCES:.c=.o)
-	$(LD) $^ $(TINYQV_SDK)/start.o $(TINYQV_SDK)/tinyQV-sim.a $(RISCV_TOOLCHAIN)/riscv32-unknown-elf/lib/libc.a $(RISCV_TOOLCHAIN)/lib/gcc/riscv32-unknown-elf/*/libgcc.a  -T $(TINYQV_SDK)/memmap_sim --gc-sections -o $@
+	@echo "Linking $@..."
+	@$(LD) $^ $(TINYQV_SDK)/start.o $(TINYQV_SDK)/tinyQV-sim.a $(RISCV_TOOLCHAIN)/riscv32-unknown-elf/lib/libc.a $(RISCV_TOOLCHAIN)/lib/gcc/riscv32-unknown-elf/*/libgcc.a  -T $(TINYQV_SDK)/memmap_sim --gc-sections -o $@
 
 $(PROJECT_NAME).bin: $(PROJECT_NAME).elf
-	$(OBJCOPY) $< -O binary $@
+	@echo "Creating $@..."
+	@$(OBJCOPY) $< -O binary $@
 
 $(PROJECT_NAME).hex: $(PROJECT_NAME).bin
-	od -An -t x1 -w4 -v $< > $@
+	@echo "Creating $@..."
+	@od -An -t x1 -w4 -v $< > $@
