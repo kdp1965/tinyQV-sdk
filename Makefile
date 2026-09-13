@@ -4,7 +4,7 @@ CC = $(RISCV_TOOLCHAIN)/bin/riscv32-unknown-elf-gcc
 AS = $(RISCV_TOOLCHAIN)/bin/riscv32-unknown-elf-as
 AR = $(RISCV_TOOLCHAIN)/bin/riscv32-unknown-elf-ar
 
-all: tinyQV.a tinyQV-sim.a start.o
+all: tinyQV.a tinyQV-sim.a tinyQV-js.a start.o
 
 clean:
 	@rm -f *.o *.a fatfs/*.o sdcard/*.o
@@ -26,6 +26,18 @@ uart_buf_sim.o: uart_buf.s
 	@$(AS) --defsym TINYQV_SIM=1 -march=rv32ec_zicsr_zcb_zicond -mabi=ilp32e $< -o $@
 
 tinyQV.a: uart.o uart_buf.o mul.o isqrt.o peripheral.o runtime.o spi.o timer.o prism.o
+	@echo "Archiving $@..."
+	@$(AR) rcs $@ $^
+
+# PRISM driver for the Jane Street (ihp-um-janestreet-prism) design: same
+# API, PRISM_CONFIG selects the register map (prism.h).  Link tinyQV-js.a
+# instead of tinyQV.a and build the application with
+# -DPRISM_CONFIG=PRISM_CONFIG_JANESTREET so prism.h agrees.
+prism_js.o: prism.c prism.h prism_cfg_janestreet.h
+	@echo "Compiling prism.c (janestreet)..."
+	@$(CC) -DPRISM_CONFIG=PRISM_CONFIG_JANESTREET -O2 -march=rv32ec_zicsr_zcb_zicond_zilsd -mabi=ilp32e -nostdlib -nostartfiles -ffreestanding -ffunction-sections -fdata-sections -Wall -Werror -lc -I$(PWD) -c $< -o $@
+
+tinyQV-js.a: uart.o uart_buf.o mul.o isqrt.o peripheral.o runtime.o spi.o timer.o prism_js.o
 	@echo "Archiving $@..."
 	@$(AR) rcs $@ $^
 
