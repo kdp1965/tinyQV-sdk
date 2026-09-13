@@ -216,24 +216,24 @@ static void cfgmem_shift_lo(uint32_t i, uint32_t value)
     cfgmem_wait();
 }
 
-// Shift a word into hi macro i (through the bypassed lo macro)
+// Shift hi macro i (its Di is hi[i-1]'s Do, or the host word with BYP_HI)
 static void cfgmem_shift_hi(uint32_t i, uint32_t value)
 {
     cfgmem_write(CFGMEM_REG_HI(i), value);
     cfgmem_wait();
 }
 
-// Read row r of hi macro i (no bypass)
+// Read row r of hi macro i (bypass off)
 static uint32_t cfgmem_read_hi(uint32_t i, uint32_t row)
 {
     cfgmem_ctrl(CFGMEM_CTRL_ADDR_SEL | CFGMEM_CTRL_ADDR(row));
-    return cfgmem_read(CFGMEM_REG_LO(i));
+    return cfgmem_read(CFGMEM_REG_HI(i));
 }
 
-// Read row r of lo macro i, looking through the bypassed hi macro
+// Read row r of lo macro i (bypass off)
 static uint32_t cfgmem_read_lo(uint32_t i, uint32_t row)
 {
-    cfgmem_ctrl(CFGMEM_CTRL_BYP_HI | CFGMEM_CTRL_ADDR_SEL | CFGMEM_CTRL_ADDR(row));
+    cfgmem_ctrl(CFGMEM_CTRL_ADDR_SEL | CFGMEM_CTRL_ADDR(row));
     return cfgmem_read(CFGMEM_REG_LO(i));
 }
 
@@ -244,19 +244,21 @@ static void cfgmem_release(void)
 }
 
 // Load bank B (hi macros) from hi_words and bank A (lo macros) from
-// lo_words, each PRISM_BANK_STATES states highest state first.  The last
-// word shifted in lands in row 0.  Either pointer may be NULL to leave that
-// bank alone (bank B must be written before bank A).
+// lo_words, each PRISM_BANK_STATES states highest state first.  The macros
+// of a bank form a chain (host -> 0 -> 1 -> 2 -> 3); with the bank's bypass
+// bit set every macro sees the host word and is shifted with its own
+// strobe.  The last word shifted in lands in row 0.  Either pointer may be
+// NULL to leave that bank alone.
 static void cfgmem_load_banks(const uint32_t *lo_words, const uint32_t *hi_words)
 {
     if (hi_words) {
-        cfgmem_ctrl(CFGMEM_CTRL_BYP_LO);
+        cfgmem_ctrl(CFGMEM_CTRL_BYP_HI);
         for (uint32_t k = 0; k < PRISM_BANK_STATES; k++)
             for (uint32_t j = 0; j < PRISM_STEW_WORDS; j++)
                 cfgmem_shift_hi(PRISM_STEW_WORDS - 1 - j, *hi_words++);
     }
-    cfgmem_ctrl(0);
     if (lo_words) {
+        cfgmem_ctrl(CFGMEM_CTRL_BYP_LO);
         for (uint32_t k = 0; k < PRISM_BANK_STATES; k++)
             for (uint32_t j = 0; j < PRISM_STEW_WORDS; j++)
                 cfgmem_shift_lo(PRISM_STEW_WORDS - 1 - j, *lo_words++);

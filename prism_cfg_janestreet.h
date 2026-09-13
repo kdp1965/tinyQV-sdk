@@ -35,10 +35,11 @@
 #define PRISM_OUT_MASK              0x1FFFFFu
 
 // ---- CFGMEM loader peripheral (base PERI_BASE_ADDRESS(4)) -----------------
-//   0x00 + i*4  write: shift a 32-bit word into "lo" macro i (i = 0..3).
-//               read : "hi" macro i output word at the CTRL row address.
-//   0x20 + i*4  write: shift the lo[i] output word into "hi" macro i (with
-//               BYP_LO set the written data goes straight through lo).
+//   0x00 + i*4  write: shift "lo" macro i (i = 0..3); read: lo macro i's
+//               output word (CTRL row address when addr_sel is set).
+//   0x20 + i*4  write: shift "hi" macro i; read: hi macro i's output word.
+//   Each bank's macros form a chain (host -> 0 -> 1 -> 2 -> 3); with the
+//   bank's bypass bit set every macro sees the host word.
 //   0x1f        control BYTE: [3:0] row address, [4] address select (1 =
 //               use [3:0], 0 = PRISM drives it), [5] loader busy (RO),
 //               [6] bypass lo, [7] bypass hi.
