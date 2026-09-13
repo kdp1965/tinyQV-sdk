@@ -95,6 +95,8 @@
 #define PRISM_SH_CRC_POLY       0x28
 #define PRISM_SH_CRC            0x2C    // read value; write = preset
 #define PRISM_SH_CRC_EXPECTED   0x30
+#define PRISM_SH_CFG2           0x34    // input slot selects, see PRISM_CFG2_*
+#define PRISM_SH_CONST          0x38    // constants K3..K0, see PRISM_CONST
 
 // The classic register names resolve to the selected shard's window
 // (see prism_set_shard()); PRISM_REG_* below are shard 0 for convenience.
@@ -135,6 +137,24 @@
 #define PRISM_CFG1_FIFO_FLAG21(x)       ((uint32_t)((x) & 3u) << 26)
 #define PRISM_CFG1_FIFOB_FLAG26(x)      ((uint32_t)((x) & 3u) << 28)    // shard 0, unfractured
 #define PRISM_CFG1_FIFOB_FLAG27(x)      ((uint32_t)((x) & 3u) << 30)
+
+// ---- CFG2: input slots (inputs 16-19 = slots 0-3, 28-31 = slots 4-7) ------
+// Each slot: 0 = default (in_prev[k] for 16-19, 0 for 28-31), 1-4 =
+// in_prev[0..3], 5-12 = comm[0..7], 13 = comm == K3, 14 = flag2.
+#define PRISM_SLOT_DEFAULT              0u
+#define PRISM_SLOT_IN_PREV(k)           (1u + (k))
+#define PRISM_SLOT_COMM(b)              (5u + (b))
+#define PRISM_SLOT_MATCH                13u
+#define PRISM_SLOT_FLAG2                14u
+#define PRISM_CFG2_SLOT(slot, code)     ((uint32_t)((code) & 0xFu) << (4 * (slot)))
+// ---- CONST: four constants; OUT_COMM_LOAD picks K[{out20, out18}] with
+// PRISM_CFG_COMM_LOAD_K, K3 is also the comm match value (slot code 13)
+#define PRISM_CONST(k0, k1, k2, k3)     ((uint32_t)(k0) | ((uint32_t)(k1) << 8) | \
+                                         ((uint32_t)(k2) << 16) | ((uint32_t)(k3) << 24))
+// ---- CFG0 additions (4h) ---------------------------------------------------
+#define PRISM_CFG_SHIFT_IN_COND         (1u << 28)  // shifter input = cond_out[0]
+#define PRISM_CFG_FLAG_LATCH            (1u << 29)  // OUT_LATCH stores {cond1, cond0} + out19 as flags
+#define PRISM_CFG_COMM_LOAD_K           (1u << 30)  // OUT_COMM_LOAD from CONST
 
 // ---- CTRL (common) --------------------------------------------------------
 #define PRISM_CTRL_ENABLE           (1u << 30)
@@ -225,13 +245,14 @@
 //   in[13:12] latched inputs (or latched outputs with LATCH_IN_OUT)
 //   in[14]    shift count == 0 (all bits shifted)
 //   in[15]    count2 == comm
-//   in[19:16] in_prev[3:0] edge-capture flops (sources PRISM_CFG1_IN_PREV_SRC)
+//   in[19:16] slots 0-3 (PRISM_CFG2_SLOT), default in_prev[3:0] (PRISM_CFG1_IN_PREV_SRC)
 //   in[20]    FIFO flag slot E (empty, or per PRISM_CFG1_FIFO_FLAG20)
 //   in[21]    FIFO flag slot F (full, or per PRISM_CFG1_FIFO_FLAG21)
 //   in[22]    crc_ok
 //   in[23]    count1 wrapped  in[24] semaphore     in[25] other shard halted
 //   in[26]    FIFO B flag slot E   in[27] FIFO B flag slot F   (shard 0 while
 //             unfractured: FIFO B = shard 1's; PRISM_CFG1_FIFOB_FLAG26/27)
+//   in[31:28] slots 4-7 (PRISM_CFG2_SLOT), default 0
 //
 // PRISM FSM output vector (per shard)
 //   out[3:0]  pin_out[3:0] (routed to uo_out[7:1] by PINMUX)
@@ -244,6 +265,8 @@
 //             OUT_FIFO_PUSH_POP (unfractured, shard 0: out[5] strobes its
 //             own FIFO A when 0, shard 1's FIFO B when 1, each per its own
 //             direction; push / pop with the usual A = RX, B = TX)
-//   out[16]   OUT_COMM_LOAD        out[17] OUT_LOAD_CRC
+//   out[16]   OUT_COMM_LOAD        out[17] OUT_LOAD_CRC (one byte per load via comm)
+//   out[18]   OUT_K_SEL0           out[20] OUT_K_SEL1 (constant select)
+//   out[19]   OUT_SEMA_SET / OUT_FLAG2 (value stored in flag2 by OUT_LATCH)
 //   out[19]   OUT_SEMA_SET
 // ==========================================================================
