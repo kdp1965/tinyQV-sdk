@@ -229,6 +229,20 @@ bool prism_fifo_push(uint8_t value);                // TX mode: false if full /
 void prism_fifo_flush(void);                        // no-op without a flushable FIFO
 #if PRISM_HAS_TX_FIFO
 void prism_fifo_set_levels(uint8_t almost_empty, uint8_t almost_full);
+// Which two of the FIFO's flags the FSM sees on inputs 20 / 21 (own FIFO)
+// and, for shard 0 unfractured, 26 / 27 (shard 1's FIFO B).  Each argument
+// is 0 (the slot's default: empty for 20 / 26, full for 21 / 27) or a
+// combination of PRISM_FLAG_ALMOST and PRISM_FLAG_SWAP (the other side).
+void prism_fifo_set_flag_inputs(uint8_t slot20, uint8_t slot21);
+void prism_fifob_set_flag_inputs(uint8_t slot26, uint8_t slot27);
+#endif
+#if PRISM_HAS_IN_PREV
+// Edge capture: in_prev flop i (input 16 + i) of the selected shard follows
+// PRISM input `source` (0-6 = ui_in pin, 8 = host_in[0], 9 = host_in[1]).
+// The flop captures its source when a decision tree that reads that input
+// fires and the jump is executed, so `input ^ in_prev` is true once per
+// transition.  A source of 0xF disables the flop (reads 0).
+void prism_set_in_prev_source(int flop, uint8_t source);
 #endif
 
 // ==========================================================================

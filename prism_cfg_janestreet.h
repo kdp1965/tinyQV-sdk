@@ -30,6 +30,7 @@
 #define PRISM_HAS_TX_FIFO           1
 #define PRISM_HAS_CRC               1
 #define PRISM_HAS_BP_COND           1
+#define PRISM_HAS_IN_PREV           1           // in_prev edge-capture flops, inputs 16-19
 #define PRISM_COUNT1_MASK           0xFFFFFFFFu
 #define PRISM_IN_MASK               0xFFFFFFFFu
 #define PRISM_OUT_MASK              0x1FFFFFu
@@ -88,7 +89,7 @@
 #define PRISM_SH_HOST           0x14    // host_in[1:0]
 #define PRISM_SH_TOGGLE         0x15    // W byte: toggle host_in[0], clear the interrupt
 #define PRISM_SH_FLAGS          0x18    // RO: see PRISM_FLAG_*
-#define PRISM_SH_CFG1           0x1C    // [19:16] FIFO almost-empty level, [23:20] almost-full level
+#define PRISM_SH_CFG1           0x1C    // see PRISM_CFG1_*
 #define PRISM_SH_FIFO           0x20    // byte: write pushes (TX mode), read pops (RX mode)
 #define PRISM_SH_FIFO_STATUS    0x24    // see PRISM_FIFO_STAT_*; any write flushes
 #define PRISM_SH_CRC_POLY       0x28
@@ -116,6 +117,24 @@
 #define PRISM_FLAG_FIFO_EMPTY   (1u << 8)
 #define PRISM_FLAG_FIFO_FULL    (1u << 9)
 #define PRISM_FLAG_CRC_OK       (1u << 10)
+
+// ---- CFG1 fields (per shard) ------------------------------------------------
+// in_prev edge-capture flop i (input 16 + i) follows PRISM input n: 0-6 =
+// ui_in pin, 8 = host_in[0], 9 = host_in[1].  It captures when a decision
+// tree that reads input n fires and the jump executes.
+#define PRISM_CFG1_IN_PREV_SRC(i, n)    ((uint32_t)((n) & 0xFu) << (4 * (i)))
+#define PRISM_CFG1_IN_PREV_MASK(i)      (0xFu << (4 * (i)))
+#define PRISM_CFG1_FIFO_AE_LEVEL(l)     ((uint32_t)((l) & 0xFu) << 16)    // almost-empty: count <= l
+#define PRISM_CFG1_FIFO_AF_LEVEL(l)     ((uint32_t)((l) & 0xFu) << 20)    // almost-full: count >= 16 - l
+// FIFO flag input slots: each slot has a default side (input 20 / 26 empty,
+// input 21 / 27 full); select bit 0 picks the almost- flag of that side and
+// bit 1 swaps to the other side, so any two of the four flags can be watched.
+#define PRISM_FLAG_ALMOST               1u
+#define PRISM_FLAG_SWAP                 2u
+#define PRISM_CFG1_FIFO_FLAG20(x)       ((uint32_t)((x) & 3u) << 24)
+#define PRISM_CFG1_FIFO_FLAG21(x)       ((uint32_t)((x) & 3u) << 26)
+#define PRISM_CFG1_FIFOB_FLAG26(x)      ((uint32_t)((x) & 3u) << 28)    // shard 0, unfractured
+#define PRISM_CFG1_FIFOB_FLAG27(x)      ((uint32_t)((x) & 3u) << 30)
 
 // ---- CTRL (common) --------------------------------------------------------
 #define PRISM_CTRL_ENABLE           (1u << 30)
@@ -206,9 +225,13 @@
 //   in[13:12] latched inputs (or latched outputs with LATCH_IN_OUT)
 //   in[14]    shift count == 0 (all bits shifted)
 //   in[15]    count2 == comm
-//   in[20]    fifo_empty      in[21] fifo_full     in[22] crc_ok
+//   in[19:16] in_prev[3:0] edge-capture flops (sources PRISM_CFG1_IN_PREV_SRC)
+//   in[20]    FIFO flag slot E (empty, or per PRISM_CFG1_FIFO_FLAG20)
+//   in[21]    FIFO flag slot F (full, or per PRISM_CFG1_FIFO_FLAG21)
+//   in[22]    crc_ok
 //   in[23]    count1 wrapped  in[24] semaphore     in[25] other shard halted
-//   in[26]    fifo almost full                     in[27] fifo almost empty
+//   in[26]    FIFO B flag slot E   in[27] FIFO B flag slot F   (shard 0 while
+//             unfractured: FIFO B = shard 1's; PRISM_CFG1_FIFOB_FLAG26/27)
 //
 // PRISM FSM output vector (per shard)
 //   out[3:0]  pin_out[3:0] (routed to uo_out[7:1] by PINMUX)
@@ -217,7 +240,10 @@
 //   out[8]    OUT_SHIFT            out[9]  OUT_COUNT2_INC
 //   out[10]   OUT_COUNT2_DEC       out[11] OUT_COUNT2_CLEAR
 //   out[12]   OUT_CRC_CLEAR        out[13] OUT_CRC_UPDATE
-//   out[14]   OUT_HOST_INTERRUPT   out[15] OUT_SEMA_CLEAR
+//   out[14]   OUT_HOST_INTERRUPT   out[15] OUT_SEMA_CLEAR (fractured) /
+//             OUT_FIFO_PUSH_POP (unfractured, shard 0: out[5] strobes its
+//             own FIFO A when 0, shard 1's FIFO B when 1, each per its own
+//             direction; push / pop with the usual A = RX, B = TX)
 //   out[16]   OUT_COMM_LOAD        out[17] OUT_LOAD_CRC
 //   out[19]   OUT_SEMA_SET
 // ==========================================================================

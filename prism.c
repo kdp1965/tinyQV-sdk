@@ -720,7 +720,21 @@ void prism_fifo_flush(void)
 void prism_fifo_set_levels(uint8_t almost_empty, uint8_t almost_full)
 {
     uint32_t cfg1 = prism_read32(prism_shard_reg(PRISM_SH_CFG1)) & ~0x00FF0000u;
-    cfg1 |= ((uint32_t)(almost_empty & 0xFu) << 16) | ((uint32_t)(almost_full & 0xFu) << 20);
+    cfg1 |= PRISM_CFG1_FIFO_AE_LEVEL(almost_empty) | PRISM_CFG1_FIFO_AF_LEVEL(almost_full);
+    prism_write32(prism_shard_reg(PRISM_SH_CFG1), cfg1);
+}
+
+void prism_fifo_set_flag_inputs(uint8_t slot20, uint8_t slot21)
+{
+    uint32_t cfg1 = prism_read32(prism_shard_reg(PRISM_SH_CFG1)) & ~0x0F000000u;
+    cfg1 |= PRISM_CFG1_FIFO_FLAG20(slot20) | PRISM_CFG1_FIFO_FLAG21(slot21);
+    prism_write32(prism_shard_reg(PRISM_SH_CFG1), cfg1);
+}
+
+void prism_fifob_set_flag_inputs(uint8_t slot26, uint8_t slot27)
+{
+    uint32_t cfg1 = prism_read32(prism_shard_reg(PRISM_SH_CFG1)) & ~0xF0000000u;
+    cfg1 |= PRISM_CFG1_FIFOB_FLAG26(slot26) | PRISM_CFG1_FIFOB_FLAG27(slot27);
     prism_write32(prism_shard_reg(PRISM_SH_CFG1), cfg1);
 }
 
@@ -751,6 +765,17 @@ void prism_fifo_flush(void)
 {
 }
 
+#endif
+
+#if PRISM_HAS_IN_PREV
+void prism_set_in_prev_source(int flop, uint8_t source)
+{
+    if (flop < 0 || flop > 3)
+        return;
+    uint32_t cfg1 = prism_read32(prism_shard_reg(PRISM_SH_CFG1)) & ~PRISM_CFG1_IN_PREV_MASK(flop);
+    cfg1 |= PRISM_CFG1_IN_PREV_SRC(flop, source);
+    prism_write32(prism_shard_reg(PRISM_SH_CFG1), cfg1);
+}
 #endif
 
 bool prism_fifo_empty(void)
