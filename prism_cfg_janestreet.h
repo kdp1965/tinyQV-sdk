@@ -155,7 +155,7 @@
 #define PRISM_CFG_SHIFT_IN_COND         (1u << 28)  // shifter input = cond_out[0]
 #define PRISM_CFG_FLAG_LATCH            (1u << 29)  // OUT_LATCH stores {cond1, cond0} + out19 as flags
 #define PRISM_CFG_COMM_LOAD_K           (1u << 30)  // OUT_COMM_LOAD from CONST
-#define PRISM_CFG_FIFO_SRAM             (1u << 31)  // this shard's FIFO is the 8 KB SRAM FIFO (levels in 64-byte units)
+#define PRISM_CFG_FIFO_SRAM             (1u << 31)  // this shard's FIFO is its 2 KB SRAM FIFO (one 512x32 macro per shard; levels in 64-byte units)
 
 // ---- CTRL (common) --------------------------------------------------------
 #define PRISM_CTRL_ENABLE           (1u << 30)
