@@ -776,6 +776,16 @@ void prism_set_in_prev_source(int flop, uint8_t source)
     cfg1 |= PRISM_CFG1_IN_PREV_SRC(flop, source);
     prism_write32(prism_shard_reg(PRISM_SH_CFG1), cfg1);
 }
+
+// Manchester bit recoverer (10BASE-T receive): the line on PRISM input
+// `pin` (ui_in 0-6), `half_bit_clocks` PRISM clocks per half bit (3 at
+// 60 MHz).  The recovered bit becomes the shifter input and its "bit
+// valid" is CFG2 slot code PRISM_SLOT_MRX_VALID; 0 clocks switches it off.
+void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_CFG3),
+                  half_bit_clocks ? PRISM_CFG3(pin & 7u, half_bit_clocks & 15u) : 0u);
+}
 #endif
 
 bool prism_fifo_empty(void)

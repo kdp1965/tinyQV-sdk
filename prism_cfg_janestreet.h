@@ -97,6 +97,7 @@
 #define PRISM_SH_CRC_EXPECTED   0x30
 #define PRISM_SH_CFG2           0x34    // input slot selects, see PRISM_CFG2_*
 #define PRISM_SH_CONST          0x38    // constants K3..K0, see PRISM_CONST
+#define PRISM_SH_CFG3           0x3C    // Manchester bit recoverer, see PRISM_CFG3
 
 // The classic register names resolve to the selected shard's window
 // (see prism_set_shard()); PRISM_REG_* below are shard 0 for convenience.
@@ -146,6 +147,15 @@
 #define PRISM_SLOT_COMM(b)              (5u + (b))
 #define PRISM_SLOT_MATCH                13u
 #define PRISM_SLOT_FLAG2                14u
+#define PRISM_SLOT_MRX_VALID            15u     // Manchester bit recoverer: a bit is waiting (cleared by OUT_SHIFT)
+
+// ---- CFG3: Manchester bit recoverer (10BASE-T receive) ----------------------
+// pin = PRISM input 0-6 (ui_in) carrying the line, hb = clocks per half bit
+// (3 at 60 MHz); the recovered bit becomes the shifter input, its valid is
+// slot code PRISM_SLOT_MRX_VALID.  The chroma shifts on each valid bit.
+#define PRISM_CFG3_MRX_EN               (1u << 3)
+#define PRISM_CFG3_SHIFT_MRX            (1u << 8)
+#define PRISM_CFG3(pin, hb)             ((uint32_t)(pin) | PRISM_CFG3_MRX_EN | ((uint32_t)(hb) << 4) | PRISM_CFG3_SHIFT_MRX)
 #define PRISM_CFG2_SLOT(slot, code)     ((uint32_t)((code) & 0xFu) << (4 * (slot)))
 // ---- CONST: four constants; OUT_COMM_LOAD picks K[{out20, out18}] with
 // PRISM_CFG_COMM_LOAD_K, K3 is also the comm match value (slot code 13)
