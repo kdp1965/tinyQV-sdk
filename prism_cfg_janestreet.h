@@ -91,7 +91,7 @@
 #define PRISM_SH_FLAGS          0x18    // RO: see PRISM_FLAG_*
 #define PRISM_SH_CFG1           0x1C    // see PRISM_CFG1_*
 #define PRISM_SH_FIFO           0x20    // byte: write pushes (TX mode), read pops (RX mode)
-#define PRISM_SH_FIFO_STATUS    0x24    // see PRISM_FIFO_STAT_*; any write flushes
+#define PRISM_SH_FIFO_STATUS    0x24    // see PRISM_FIFO_STAT_*; count in [21:8]; any write flushes
 #define PRISM_SH_CRC_POLY       0x28
 #define PRISM_SH_CRC            0x2C    // read value; write = preset
 #define PRISM_SH_CRC_EXPECTED   0x30
@@ -155,6 +155,7 @@
 #define PRISM_CFG_SHIFT_IN_COND         (1u << 28)  // shifter input = cond_out[0]
 #define PRISM_CFG_FLAG_LATCH            (1u << 29)  // OUT_LATCH stores {cond1, cond0} + out19 as flags
 #define PRISM_CFG_COMM_LOAD_K           (1u << 30)  // OUT_COMM_LOAD from CONST
+#define PRISM_CFG_FIFO_SRAM             (1u << 31)  // this shard's FIFO is the 8 KB SRAM FIFO (levels in 64-byte units)
 
 // ---- CTRL (common) --------------------------------------------------------
 #define PRISM_CTRL_ENABLE           (1u << 30)
