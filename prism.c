@@ -786,6 +786,14 @@ void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks)
     prism_write32(prism_shard_reg(PRISM_SH_CFG3),
                   half_bit_clocks ? PRISM_CFG3(pin & 7u, half_bit_clocks & 15u) : 0u);
 }
+
+// Free-running timer: PRISM input 28 ticks for one clock every `clocks`
+// clocks (24-bit, 0 = off), e.g. 960000 for the 16 ms Ethernet link pulse
+// interval at 60 MHz.  Nothing in the chroma needs to start or reload it.
+void prism_set_timer2(uint32_t clocks)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_PRELOAD2), clocks ? (clocks - 1u) & 0xFFFFFFu : 0u);
+}
 #endif
 
 bool prism_fifo_empty(void)

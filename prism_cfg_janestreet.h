@@ -98,6 +98,7 @@
 #define PRISM_SH_CFG2           0x34    // input slot selects, see PRISM_CFG2_*
 #define PRISM_SH_CONST          0x38    // constants K3..K0, see PRISM_CONST
 #define PRISM_SH_CFG3           0x3C    // Manchester bit recoverer, see PRISM_CFG3
+#define PRISM_SH_PRELOAD2       0x40    // free-running timer period: input 28 ticks every PRELOAD2 + 1 clocks, 0 = off
 
 // The classic register names resolve to the selected shard's window
 // (see prism_set_shard()); PRISM_REG_* below are shard 0 for convenience.

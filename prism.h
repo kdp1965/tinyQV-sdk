@@ -244,6 +244,7 @@ void prism_fifob_set_flag_inputs(uint8_t slot26, uint8_t slot27);
 // transition.  A source of 0xF disables the flop (reads 0).
 void prism_set_in_prev_source(int flop, uint8_t source);
 void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks);  // 10BASE-T receive bit recoverer (CFG3); 0 = off
+void prism_set_timer2(uint32_t clocks);                          // free-running timer: input 28 ticks every `clocks` clocks; 0 = off
 #endif
 
 // ==========================================================================
