@@ -245,6 +245,11 @@ void prism_fifob_set_flag_inputs(uint8_t slot26, uint8_t slot27);
 void prism_set_in_prev_source(int flop, uint8_t source);
 void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks);  // 10BASE-T receive bit recoverer (CFG3); 0 = off
 void prism_set_timer2(uint32_t clocks);                          // free-running timer: input 28 ticks every `clocks` clocks; 0 = off
+// Timer 2 as a retriggerable timeout: the count restarts every time the
+// shard enters `state` (next SI is it, current SI is not), so input 28
+// ticks `clocks` clocks after the last entry and, unless `one_shot`,
+// every `clocks` clocks after that until the next entry.  No STEW bits.
+void prism_set_timer2_retrigger(uint32_t clocks, uint8_t state, bool one_shot);
 #endif
 #if PRISM_HAS_TRACE
 // Execution trace of the selected shard into its SRAM (both SRAMs with
@@ -257,8 +262,11 @@ void prism_set_timer2(uint32_t clocks);                          // free-running
 // capturing it works as configured): prism_trace_read() pops the next one
 // (PRISM_TRACE_SI/MUX/MATCH0/MATCH1/EXEC decode it, prism_trace_outputs()
 // gives the 21 outputs of that clock from the chroma); with
-// PRISM_TRACE_BIG select shard 1 for entries 1024 and up.  The traced SRAM
-// takes no FIFO pushes until prism_trace_off().
+// PRISM_TRACE_BIG select shard 1 for entries 1024 and up; with
+// PRISM_TRACE_OTHER the trace goes into the other shard's SRAM, so this
+// shard's SRAM FIFO keeps streaming and the entries are read with the
+// other shard selected.  The traced SRAM takes no FIFO pushes until
+// prism_trace_off().
 void prism_trace_config(uint32_t cfg);              // PRISM_TRACE_EN is implied
 void prism_trace_off(void);
 void prism_trace_arm(void);

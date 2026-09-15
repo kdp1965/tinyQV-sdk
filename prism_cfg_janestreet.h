@@ -100,7 +100,8 @@
 #define PRISM_SH_CFG2           0x34    // input slot selects, see PRISM_CFG2_*
 #define PRISM_SH_CONST          0x38    // constants K3..K0, see PRISM_CONST
 #define PRISM_SH_CFG3           0x3C    // Manchester bit recoverer, see PRISM_CFG3
-#define PRISM_SH_PRELOAD2       0x40    // free-running timer period: input 28 ticks every PRELOAD2 + 1 clocks, 0 = off
+#define PRISM_SH_PRELOAD2       0x40    // timer 2: [23:0] period (input 28 ticks every PRELOAD2 + 1 clocks, 0 = off),
+                                        // [24] restart on entry into state [29:25], [30] one-shot; PRISM_PRELOAD2_*
 #define PRISM_SH_TRACE_CFG      0x44    // trace configuration, see PRISM_TRACE_* (write-only)
 #define PRISM_SH_TRACE_CTRL     0x48    // write PRISM_TRACE_ARM / STOP; read PRISM_TRACE_ST_* + entries
                                         // readout: the traced SRAM's FIFO serves the entries as bytes through
@@ -180,6 +181,8 @@
 // follow from the entry and the chroma: prism_trace_outputs().
 #define PRISM_TRACE_EN                  (1u << 0)
 #define PRISM_TRACE_BIG                 (1u << 1)
+#define PRISM_TRACE_OTHER               (1u << 6)   // into the other shard's SRAM: this shard's SRAM FIFO keeps
+                                                    // running, the entries come through the other shard's window
 #define PRISM_TRACE_TRIG_NOW            (0u << 2)   // trigger at once
 #define PRISM_TRACE_TRIG_STATE          (1u << 2)   // in state PRISM_TRACE_STATE(si)
 #define PRISM_TRACE_TRIG_JUMP           (2u << 2)   // that state taking either jump
@@ -196,6 +199,11 @@
 #define PRISM_TRACE_ST_DONE             (1u << 2)
 #define PRISM_TRACE_ST_BIG              (1u << 3)   // this shard has both SRAMs
 #define PRISM_TRACE_ST_ACTIVE           (1u << 4)   // this shard owns an SRAM
+// ---- timer 2 (section 4l): free-running, or restarted on entry into a state
+#define PRISM_PRELOAD2_PERIOD(clocks)   ((uint32_t)(clocks) & 0xFFFFFFu)           // ticks every clocks + 1
+#define PRISM_PRELOAD2_RELOAD           (1u << 24)  // restart the count when the shard enters PRISM_PRELOAD2_STATE
+#define PRISM_PRELOAD2_STATE(si)        ((uint32_t)((si) & 0x1Fu) << 25)
+#define PRISM_PRELOAD2_ONESHOT          (1u << 30)  // with RELOAD: one tick per entry, then wait for the next
 // entry (16 bits) = [4:0] SI, [10:5] LUT mux inputs, [11] tree 0 matched, [12] tree 1 taken
 // (matched, tree 0 did not), [13] executing (not halted: the outputs are the STEW's)
 #define PRISM_TRACE_SI(e)               ((e) & 0x1Fu)

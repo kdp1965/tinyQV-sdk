@@ -792,7 +792,16 @@ void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks)
 // interval at 60 MHz.  Nothing in the chroma needs to start or reload it.
 void prism_set_timer2(uint32_t clocks)
 {
-    prism_write32(prism_shard_reg(PRISM_SH_PRELOAD2), clocks ? (clocks - 1u) & 0xFFFFFFu : 0u);
+    prism_write32(prism_shard_reg(PRISM_SH_PRELOAD2), clocks ? PRISM_PRELOAD2_PERIOD(clocks - 1u) : 0u);
+}
+
+// Retriggerable: the count restarts on entry into `state`, and with
+// `one_shot` it stops after its tick until the next entry.
+void prism_set_timer2_retrigger(uint32_t clocks, uint8_t state, bool one_shot)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_PRELOAD2),
+                  clocks ? (PRISM_PRELOAD2_PERIOD(clocks - 1u) | PRISM_PRELOAD2_RELOAD | PRISM_PRELOAD2_STATE(state) |
+                            (one_shot ? PRISM_PRELOAD2_ONESHOT : 0u)) : 0u);
 }
 #endif
 
