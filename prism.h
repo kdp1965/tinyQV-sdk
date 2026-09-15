@@ -250,6 +250,14 @@ void prism_set_timer2(uint32_t clocks);                          // free-running
 // ticks `clocks` clocks after the last entry and, unless `one_shot`,
 // every `clocks` clocks after that until the next entry.  No STEW bits.
 void prism_set_timer2_retrigger(uint32_t clocks, uint8_t state, bool one_shot);
+// Constant table: the 16x8 latch FIFO as 16 constants (CONST_TAB, PRISM_CTAB_*).
+// prism_const_table_load() fills rows 0..n-1 through the flop FIFO (it selects
+// that FIFO in TX mode, flushes, pushes and restores CFG0; do it before the
+// shard's FIFO is in use), prism_const_table(cfg) then routes OUT_COMM_LOAD
+// to the table (0 = off; PRISM_CTAB_INDEX presets the index).
+void prism_const_table_load(const uint8_t *bytes, unsigned n);
+void prism_const_table(uint32_t cfg);
+uint8_t prism_const_table_index(void);
 #endif
 #if PRISM_HAS_TRACE
 // Execution trace of the selected shard into its SRAM (both SRAMs with

@@ -795,6 +795,28 @@ void prism_set_timer2(uint32_t clocks)
     prism_write32(prism_shard_reg(PRISM_SH_PRELOAD2), clocks ? PRISM_PRELOAD2_PERIOD(clocks - 1u) : 0u);
 }
 
+// The constant table's rows are the latch FIFO's: select it in TX mode,
+// flush, push, and put CFG0 back
+void prism_const_table_load(const uint8_t *bytes, unsigned n)
+{
+    uint32_t cfg0 = prism_read32(prism_shard_reg(PRISM_SH_CFG0));
+    prism_write32(prism_shard_reg(PRISM_SH_CFG0), (cfg0 & ~PRISM_CFG_FIFO_SRAM) | PRISM_CTRL_FIFO_DIR_TX);
+    prism_write32(prism_shard_reg(PRISM_SH_FIFO_STATUS), 0u);
+    for (unsigned i = 0; i < n && i < PRISM_CTAB_ROWS; i++)
+        prism_write8(prism_shard_reg(PRISM_SH_FIFO), bytes[i]);
+    prism_write32(prism_shard_reg(PRISM_SH_CFG0), cfg0);
+}
+
+void prism_const_table(uint32_t cfg)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_CONST_TAB), cfg);
+}
+
+uint8_t prism_const_table_index(void)
+{
+    return (uint8_t)((prism_read32(prism_shard_reg(PRISM_SH_CONST_TAB)) >> 16) & 0xFu);
+}
+
 // Retriggerable: the count restarts on entry into `state`, and with
 // `one_shot` it stops after its tick until the next entry.
 void prism_set_timer2_retrigger(uint32_t clocks, uint8_t state, bool one_shot)

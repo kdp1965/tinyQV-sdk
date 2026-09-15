@@ -103,6 +103,7 @@
 #define PRISM_SH_PRELOAD2       0x40    // timer 2: [23:0] period (input 28 ticks every PRELOAD2 + 1 clocks, 0 = off),
                                         // [24] restart on entry into state [29:25], [30] one-shot; PRISM_PRELOAD2_*
 #define PRISM_SH_TRACE_CFG      0x44    // trace configuration, see PRISM_TRACE_* (write-only)
+#define PRISM_SH_CONST_TAB      0x4C    // the latch FIFO as an addressable constant table, see PRISM_CTAB_*
 #define PRISM_SH_TRACE_CTRL     0x48    // write PRISM_TRACE_ARM / STOP; read PRISM_TRACE_ST_* + entries
                                         // readout: the traced SRAM's FIFO serves the entries as bytes through
                                         // PRISM_SH_FIFO of the window that reads that SRAM (prism_trace_read)
@@ -199,6 +200,20 @@
 #define PRISM_TRACE_ST_DONE             (1u << 2)
 #define PRISM_TRACE_ST_BIG              (1u << 3)   // this shard has both SRAMs
 #define PRISM_TRACE_ST_ACTIVE           (1u << 4)   // this shard owns an SRAM
+// ---- constant table (section 4n): CONST_TAB makes the shard's 16x8 latch
+// FIFO 16 constants at a 4-bit index.  With PRISM_CTAB_EN every OUT_COMM_LOAD
+// loads comm from the row at the index, and {OUT_K_SEL1, OUT_K_SEL0} says how
+// the index moves on that load: 0 clear, 1 + 1, 2 + add_to_idx, 3 = idx_load
+// (+ idx_load with PRISM_CTAB_LOAD_ADDS).  The byte loaded is the row after
+// the move, or before it with PRISM_CTAB_POST.  A write also sets the index
+// (PRISM_CTAB_INDEX), which reads back in the same bits.
+#define PRISM_CTAB_EN                   (1u << 0)
+#define PRISM_CTAB_LOAD_ADDS            (1u << 1)
+#define PRISM_CTAB_POST                 (1u << 2)
+#define PRISM_CTAB_LOAD(n)              ((uint32_t)((n) & 0xFu) << 4)
+#define PRISM_CTAB_ADD(n)               ((uint32_t)((n) & 0x7u) << 8)
+#define PRISM_CTAB_INDEX(n)             ((uint32_t)((n) & 0xFu) << 16)
+#define PRISM_CTAB_ROWS                 16
 // ---- timer 2 (section 4l): free-running, or restarted on entry into a state
 #define PRISM_PRELOAD2_PERIOD(clocks)   ((uint32_t)(clocks) & 0xFFFFFFu)           // ticks every clocks + 1
 #define PRISM_PRELOAD2_RELOAD           (1u << 24)  // restart the count when the shard enters PRISM_PRELOAD2_STATE
