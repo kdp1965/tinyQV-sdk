@@ -796,6 +796,85 @@ void prism_set_timer2(uint32_t clocks)
 }
 #endif
 
+#if PRISM_HAS_TRACE
+void prism_trace_config(uint32_t cfg)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_TRACE_CFG), cfg | PRISM_TRACE_EN);
+}
+
+void prism_trace_off(void)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_TRACE_CFG), 0u);
+}
+
+void prism_trace_arm(void)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_TRACE_CTRL), PRISM_TRACE_ARM);
+}
+
+void prism_trace_stop(void)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_TRACE_CTRL), PRISM_TRACE_STOP);
+}
+
+uint32_t prism_trace_status(void)
+{
+    return prism_read32(prism_shard_reg(PRISM_SH_TRACE_CTRL));
+}
+
+bool prism_trace_done(void)
+{
+    return (prism_trace_status() & PRISM_TRACE_ST_DONE) != 0;
+}
+
+uint16_t prism_trace_count(void)
+{
+    return (uint16_t)(((prism_fifo_status() >> 8) & 0x3FFFu) / 2u);   // bytes left in the FIFO / 2
+}
+
+// The next entry: two bytes from the selected shard's FIFO, low byte
+// first (the SRAM FIFO reports empty for a couple of clocks between words)
+uint32_t prism_trace_read(void)
+{
+    uint32_t v = 0;
+    for (int k = 0; k < 2; k++) {
+        int b = -1;
+        for (uint32_t spins = 0; b < 0 && spins < 64; spins++)
+            b = prism_fifo_read();
+        v |= (uint32_t)(b < 0 ? 0 : b) << (8 * k);
+    }
+    return v;
+}
+
+// The outputs the shard drove in a traced clock: the STEW of the entry's
+// state (chroma words as passed to prism_load_chroma: highest state
+// first, MSW first) holds the state outputs at bits [61:41], the tree 1
+// outputs at [82:62] and the tree 0 outputs at [103:83]; while halted
+// (no PRISM_TRACE_EXEC) the outputs were the debugger's, not the STEW's.
+uint32_t prism_trace_outputs(uint32_t entry, const uint32_t *chroma)
+{
+    if (!(entry & PRISM_TRACE_EXEC))
+        return 0;
+    const uint32_t *w = chroma + (PRISM_NUM_STATES - 1 - PRISM_TRACE_SI(entry)) * PRISM_STEW_WORDS;
+    uint32_t lsb = (entry & PRISM_TRACE_MATCH0) ? 83u : (entry & PRISM_TRACE_MATCH1) ? 62u : 41u;
+    uint32_t wi = lsb / 32u, bi = lsb % 32u;
+    uint64_t v = (uint64_t)w[PRISM_STEW_WORDS - 1 - wi] >> bi;
+    if (bi + 21u > 32u)
+        v |= (uint64_t)w[PRISM_STEW_WORDS - 2 - wi] << (32u - bi);
+    return (uint32_t)v & PRISM_OUT_MASK;
+}
+
+bool prism_trace_wait(uint32_t timeout_us)
+{
+    uint32_t deadline = read_time() + timeout_us;
+    while (!prism_trace_done()) {
+        if ((int32_t)(deadline - read_time()) <= 0)
+            return prism_trace_done();
+    }
+    return true;
+}
+#endif
+
 bool prism_fifo_empty(void)
 {
     return (prism_fifo_status() & PRISM_FIFO_STAT_EMPTY) != 0;

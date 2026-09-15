@@ -246,6 +246,30 @@ void prism_set_in_prev_source(int flop, uint8_t source);
 void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks);  // 10BASE-T receive bit recoverer (CFG3); 0 = off
 void prism_set_timer2(uint32_t clocks);                          // free-running timer: input 28 ticks every `clocks` clocks; 0 = off
 #endif
+#if PRISM_HAS_TRACE
+// Execution trace of the selected shard into its SRAM (both SRAMs with
+// PRISM_TRACE_BIG): configure with the PRISM_TRACE_* trigger bits, arm
+// (this flushes the SRAM FIFO), and from the trigger on every clock's
+// {executing, tree results, six selected LUT inputs, SI} is recorded as a
+// 16-bit entry until the buffer is full (or prism_trace_stop()).  Once
+// done, the SRAM's FIFO serves the entries in order through the selected
+// shard's FIFO register (the shard's own FIFO is frozen meanwhile; while
+// capturing it works as configured): prism_trace_read() pops the next one
+// (PRISM_TRACE_SI/MUX/MATCH0/MATCH1/EXEC decode it, prism_trace_outputs()
+// gives the 21 outputs of that clock from the chroma); with
+// PRISM_TRACE_BIG select shard 1 for entries 1024 and up.  The traced SRAM
+// takes no FIFO pushes until prism_trace_off().
+void prism_trace_config(uint32_t cfg);              // PRISM_TRACE_EN is implied
+void prism_trace_off(void);
+void prism_trace_arm(void);
+void prism_trace_stop(void);
+uint32_t prism_trace_status(void);                  // PRISM_TRACE_ST_* fields
+bool prism_trace_done(void);
+uint16_t prism_trace_count(void);                   // entries recorded
+uint32_t prism_trace_read(void);                    // next entry (2 FIFO bytes)
+bool prism_trace_wait(uint32_t timeout_us);         // until done
+uint32_t prism_trace_outputs(uint32_t entry, const uint32_t *chroma);   // the outputs driven in that clock
+#endif
 
 // ==========================================================================
 // CRC (PRISM_HAS_CRC designs, selected shard)

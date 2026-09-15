@@ -27,6 +27,7 @@
 #define PRISM_HAS_CRC               0
 #define PRISM_HAS_BP_COND           0
 #define PRISM_HAS_IN_PREV           0
+#define PRISM_HAS_TRACE             0
 #define PRISM_COUNT1_MASK           0xFFFFFFu
 #define PRISM_IN_MASK               0xFFFFu
 #define PRISM_OUT_MASK              0x7FFu

@@ -31,6 +31,8 @@
 #define PRISM_HAS_CRC               1
 #define PRISM_HAS_BP_COND           1
 #define PRISM_HAS_IN_PREV           1           // in_prev edge-capture flops, inputs 16-19
+#define PRISM_HAS_TRACE             1           // execution trace into the SRAMs (PRISM_SH_TRACE_*)
+#define PRISM_TRACE_ENTRIES         1024        // per SRAM, 16-bit entries (2048 with PRISM_TRACE_BIG)
 #define PRISM_COUNT1_MASK           0xFFFFFFFFu
 #define PRISM_IN_MASK               0xFFFFFFFFu
 #define PRISM_OUT_MASK              0x1FFFFFu
@@ -99,6 +101,10 @@
 #define PRISM_SH_CONST          0x38    // constants K3..K0, see PRISM_CONST
 #define PRISM_SH_CFG3           0x3C    // Manchester bit recoverer, see PRISM_CFG3
 #define PRISM_SH_PRELOAD2       0x40    // free-running timer period: input 28 ticks every PRELOAD2 + 1 clocks, 0 = off
+#define PRISM_SH_TRACE_CFG      0x44    // trace configuration, see PRISM_TRACE_* (write-only)
+#define PRISM_SH_TRACE_CTRL     0x48    // write PRISM_TRACE_ARM / STOP; read PRISM_TRACE_ST_* + entries
+                                        // readout: the traced SRAM's FIFO serves the entries as bytes through
+                                        // PRISM_SH_FIFO of the window that reads that SRAM (prism_trace_read)
 
 // The classic register names resolve to the selected shard's window
 // (see prism_set_shard()); PRISM_REG_* below are shard 0 for convenience.
@@ -162,6 +168,42 @@
 // PRISM_CFG_COMM_LOAD_K, K3 is also the comm match value (slot code 13)
 #define PRISM_CONST(k0, k1, k2, k3)     ((uint32_t)(k0) | ((uint32_t)(k1) << 8) | \
                                          ((uint32_t)(k2) << 16) | ((uint32_t)(k3) << 24))
+// ---- trace (section 4m): from the trigger on, every clock's {executing,
+// tree results, six selected LUT inputs, SI} of the shard goes into its
+// SRAM as a 16-bit entry until the buffer is full (1024 entries; both
+// SRAMs = 2048 with PRISM_TRACE_BIG).  One shard traces at a time: shard 0
+// wins while both enable, shard 1's tracer reports inactive.  Arming flushes that
+// SRAM's FIFO and pushes into it are dropped; once done the FIFO serves the
+// entries, 2 bytes each, low byte first, through the FIFO register of the
+// window that reads that SRAM (shard s for SRAM s: with PRISM_TRACE_BIG
+// entries 1024.. come through shard 1).  The 21 outputs of a traced clock
+// follow from the entry and the chroma: prism_trace_outputs().
+#define PRISM_TRACE_EN                  (1u << 0)
+#define PRISM_TRACE_BIG                 (1u << 1)
+#define PRISM_TRACE_TRIG_NOW            (0u << 2)   // trigger at once
+#define PRISM_TRACE_TRIG_STATE          (1u << 2)   // in state PRISM_TRACE_STATE(si)
+#define PRISM_TRACE_TRIG_JUMP           (2u << 2)   // that state taking either jump
+#define PRISM_TRACE_TRIG_EDGE           (3u << 2)   // an edge on PRISM input PRISM_TRACE_INPUT(n)
+#define PRISM_TRACE_EDGE_RISE           (0u << 4)
+#define PRISM_TRACE_EDGE_FALL           (1u << 4)
+#define PRISM_TRACE_EDGE_ANY            (2u << 4)
+#define PRISM_TRACE_STATE(si)           ((uint32_t)((si) & 0x1Fu) << 8)
+#define PRISM_TRACE_INPUT(n)            ((uint32_t)((n) & 0x1Fu) << 16)
+#define PRISM_TRACE_ARM                 (1u << 0)   // TRACE_CTRL write
+#define PRISM_TRACE_STOP                (1u << 1)
+#define PRISM_TRACE_ST_ARMED            (1u << 0)   // TRACE_CTRL read
+#define PRISM_TRACE_ST_RUNNING          (1u << 1)
+#define PRISM_TRACE_ST_DONE             (1u << 2)
+#define PRISM_TRACE_ST_BIG              (1u << 3)   // this shard has both SRAMs
+#define PRISM_TRACE_ST_ACTIVE           (1u << 4)   // this shard owns an SRAM
+// entry (16 bits) = [4:0] SI, [10:5] LUT mux inputs, [11] tree 0 matched, [12] tree 1 taken
+// (matched, tree 0 did not), [13] executing (not halted: the outputs are the STEW's)
+#define PRISM_TRACE_SI(e)               ((e) & 0x1Fu)
+#define PRISM_TRACE_MUX(e)              (((e) >> 5) & 0x3Fu)
+#define PRISM_TRACE_MATCH0              (1u << 11)
+#define PRISM_TRACE_MATCH1              (1u << 12)
+#define PRISM_TRACE_EXEC                (1u << 13)
+
 // ---- CFG0 additions (4h) ---------------------------------------------------
 #define PRISM_CFG_SHIFT_IN_COND         (1u << 28)  // shifter input = cond_out[0]
 #define PRISM_CFG_FLAG_LATCH            (1u << 29)  // OUT_LATCH stores {cond1, cond0} + out19 as flags
