@@ -104,6 +104,7 @@
                                         // [24] restart on entry into state [29:25], [30] one-shot; PRISM_PRELOAD2_*
 #define PRISM_SH_TRACE_CFG      0x44    // trace configuration, see PRISM_TRACE_* (write-only)
 #define PRISM_SH_CONST_TAB      0x4C    // the latch FIFO as an addressable constant table, see PRISM_CTAB_*
+#define PRISM_SH_COMM_PINS      0x50    // multi-bit shift lanes: comm bit per uo_out pin, see PRISM_COMM_PIN
 #define PRISM_SH_TRACE_CTRL     0x48    // write PRISM_TRACE_ARM / STOP; read PRISM_TRACE_ST_* + entries
                                         // readout: the traced SRAM's FIFO serves the entries as bytes through
                                         // PRISM_SH_FIFO of the window that reads that SRAM (prism_trace_read)
@@ -218,6 +219,14 @@
 #define PRISM_TRACE_ST_DONE             (1u << 2)
 #define PRISM_TRACE_ST_BIG              (1u << 3)   // this shard has both SRAMs
 #define PRISM_TRACE_ST_ACTIVE           (1u << 4)   // this shard owns an SRAM
+// ---- multi-bit comm shift (section 4r, PIO-like): with PRISM_CTRL_MSHIFT in
+// CFG0 every OUT_SHIFT moves {OUT_K_SEL1, OUT_K_SEL0} + 1 bits (1-4) through
+// comm, taken from PRISM inputs shift_in_sel .. shift_in_sel + 3 (the higher
+// pin the higher bit), and the shift count advances by as many.  A uo_out pin
+// with pinmux code 6 then shows the comm bit named in COMM_PINS instead of the
+// serial bit: PRISM_COMM_PIN(uo, bit) for uo_out[uo], bit 0-7.
+#define PRISM_CTRL_MSHIFT               (1u << 2)
+#define PRISM_COMM_PIN(uo, bit)         ((uint32_t)((bit) & 7u) << (3 * ((uo) - 1)))
 // ---- constant table (section 4n): CONST_TAB makes the shard's 16x8 latch
 // FIFO 16 constants at a 4-bit index.  With PRISM_CTAB_EN every OUT_COMM_LOAD
 // loads comm from the row at the index, and {OUT_K_SEL1, OUT_K_SEL0} says how

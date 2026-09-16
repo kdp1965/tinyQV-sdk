@@ -816,6 +816,11 @@ void prism_const_table_load(const uint8_t *bytes, unsigned n)
     prism_write32(prism_shard_reg(PRISM_SH_CFG0), cfg0);
 }
 
+void prism_set_comm_pins(uint32_t lanes)
+{
+    prism_write32(prism_shard_reg(PRISM_SH_COMM_PINS), lanes & 0x1FFFFFu);
+}
+
 void prism_const_table(uint32_t cfg)
 {
     prism_write32(prism_shard_reg(PRISM_SH_CONST_TAB), cfg);

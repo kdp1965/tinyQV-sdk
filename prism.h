@@ -261,6 +261,9 @@ void prism_set_timer2_retrigger(uint32_t clocks, uint8_t state, bool one_shot);
 // shard's FIFO is in use), prism_const_table(cfg) then routes OUT_COMM_LOAD
 // to the table (0 = off; PRISM_CTAB_INDEX presets the index).
 void prism_const_table_load(const uint8_t *bytes, unsigned n);
+// Multi-bit shift lanes (CFG0 PRISM_CTRL_MSHIFT, section 4r): which comm bit
+// each uo_out pin with pinmux code 6 shows; OR PRISM_COMM_PIN(uo, bit) terms
+void prism_set_comm_pins(uint32_t lanes);
 void prism_const_table(uint32_t cfg);
 uint8_t prism_const_table_index(void);
 #endif
