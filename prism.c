@@ -783,8 +783,17 @@ void prism_set_in_prev_source(int flop, uint8_t source)
 // valid" is CFG2 slot code PRISM_SLOT_MRX_VALID; 0 clocks switches it off.
 void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks)
 {
+    uint32_t smp = prism_read32(prism_shard_reg(PRISM_SH_CFG3)) & PRISM_CFG3_SMP_MASK;
     prism_write32(prism_shard_reg(PRISM_SH_CFG3),
-                  half_bit_clocks ? PRISM_CFG3(pin & 7u, half_bit_clocks & 15u) : 0u);
+                  smp | (half_bit_clocks ? PRISM_CFG3(pin & 7u, half_bit_clocks & 15u) : 0u));
+}
+
+void prism_set_sampler(uint8_t input, uint32_t edge, uint32_t actions)
+{
+    uint32_t mrx = prism_read32(prism_shard_reg(PRISM_SH_CFG3)) & ~PRISM_CFG3_SMP_MASK;
+    prism_write32(prism_shard_reg(PRISM_SH_CFG3),
+                  mrx | (actions ? (PRISM_CFG3_SMP_EN | PRISM_CFG3_SMP_SRC(input) | (edge & (3u << 22)) |
+                                    (actions & PRISM_CFG3_SMP_MASK)) : 0u));
 }
 
 // Free-running timer: PRISM input 28 ticks for one clock every `clocks`

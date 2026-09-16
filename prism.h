@@ -244,6 +244,11 @@ void prism_fifob_set_flag_inputs(uint8_t slot26, uint8_t slot27);
 // transition.  A source of 0xF disables the flop (reads 0).
 void prism_set_in_prev_source(int flop, uint8_t source);
 void prism_set_manchester(uint8_t pin, uint8_t half_bit_clocks);  // 10BASE-T receive bit recoverer (CFG3); 0 = off
+// Edge-clocked sampler: `actions` = PRISM_CFG3_SMP_SHIFT / CNT2 / LATCH / TIMER
+// performed on the PRISM_CFG3_SMP_RISE / FALL / ANY edge of PRISM input
+// `input` with no state transition; actions = 0 switches it off.  The
+// recoverer's CFG3 bits are left as they are.
+void prism_set_sampler(uint8_t input, uint32_t edge, uint32_t actions);
 void prism_set_timer2(uint32_t clocks);                          // free-running timer: input 28 ticks every `clocks` clocks; 0 = off
 // Timer 2 as a retriggerable timeout: the count restarts every time the
 // shard enters `state` (next SI is it, current SI is not), so input 28

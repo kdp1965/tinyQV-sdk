@@ -165,6 +165,23 @@
 #define PRISM_CFG3_MRX_EN               (1u << 3)
 #define PRISM_CFG3_SHIFT_MRX            (1u << 8)
 #define PRISM_CFG3(pin, hb)             ((uint32_t)(pin) | PRISM_CFG3_MRX_EN | ((uint32_t)(hb) << 4) | PRISM_CFG3_SHIFT_MRX)
+// ---- CFG3[27:16]: edge-clocked sampler (section 4p).  On the selected edge
+// of one PRISM input the hardware performs the chosen actions with no state
+// transition: shift (the shifter input as configured), count2 + 1, capture
+// the in_prev flops, count1 clear / load.  Its sticky "edge pending" flag is
+// slot code PRISM_SLOT_MRX_VALID as well (cleared by the FSM's OUT_SHIFT or
+// OUT_LATCH) and FLAGS bit 11.  Frees the bit loop of clocked slave protocols.
+#define PRISM_CFG3_SMP_EN               (1u << 16)
+#define PRISM_CFG3_SMP_SRC(n)           ((uint32_t)((n) & 0x1Fu) << 17)
+#define PRISM_CFG3_SMP_RISE             (0u << 22)
+#define PRISM_CFG3_SMP_FALL             (1u << 22)
+#define PRISM_CFG3_SMP_ANY              (2u << 22)
+#define PRISM_CFG3_SMP_SHIFT            (1u << 24)
+#define PRISM_CFG3_SMP_CNT2             (1u << 25)
+#define PRISM_CFG3_SMP_LATCH            (1u << 26)
+#define PRISM_CFG3_SMP_TIMER            (1u << 27)
+#define PRISM_CFG3_SMP_MASK             (0xFFFu << 16)
+#define PRISM_FLAG_SMP_PENDING          (1u << 11)
 #define PRISM_CFG2_SLOT(slot, code)     ((uint32_t)((code) & 0xFu) << (4 * (slot)))
 // ---- CONST: four constants; OUT_COMM_LOAD picks K[{out20, out18}] with
 // PRISM_CFG_COMM_LOAD_K, K3 is also the comm match value (slot code 13)
