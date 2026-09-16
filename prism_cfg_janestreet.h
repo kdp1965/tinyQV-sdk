@@ -180,7 +180,8 @@
 #define PRISM_CFG3_SMP_CNT2             (1u << 25)
 #define PRISM_CFG3_SMP_LATCH            (1u << 26)
 #define PRISM_CFG3_SMP_TIMER            (1u << 27)
-#define PRISM_CFG3_SMP_MASK             (0xFFFu << 16)
+#define PRISM_CFG3_SMP_INV              (1u << 28)  // flag2 swaps rising and falling
+#define PRISM_CFG3_SMP_MASK             (0x1FFFu << 16)
 #define PRISM_FLAG_SMP_PENDING          (1u << 11)
 #define PRISM_CFG2_SLOT(slot, code)     ((uint32_t)((code) & 0xFu) << (4 * (slot)))
 // ---- CONST: four constants; OUT_COMM_LOAD picks K[{out20, out18}] with
